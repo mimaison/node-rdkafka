@@ -26,9 +26,9 @@
 namespace NodeKafka {
 
 struct consumer_commit_t {
-  int64_t _offset;
-  int _partition;
-  std::string _topic_name;
+  int64_t offset;
+  int partition;
+  std::string topic_name;
 
   consumer_commit_t(std::string, int, int64_t);
   consumer_commit_t();

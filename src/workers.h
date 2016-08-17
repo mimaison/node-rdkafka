@@ -25,8 +25,8 @@ namespace Workers {
 
 class ErrorAwareWorker : public Nan::AsyncWorker {
  public:
-  explicit ErrorAwareWorker(Nan::Callback* callback_)
-      : Nan::AsyncWorker(callback_) {}
+  explicit ErrorAwareWorker(Nan::Callback* p_callback)
+      : Nan::AsyncWorker(p_callback) {}
   virtual ~ErrorAwareWorker() {}
 
   virtual void Execute() = 0;
@@ -42,13 +42,12 @@ class ErrorAwareWorker : public Nan::AsyncWorker {
   void SetErrorCode(const RdKafka::ErrorCode & err) {
     SetErrorCode(static_cast<int>(err));
   }
-
   int GetErrorCode() {
     return m_error_code;
   }
   v8::Local<v8::Object> GetErrorObject() {
     int code = GetErrorCode();
-    Baton b = Baton(static_cast<RdKafka::ErrorCode>(code));
+    Baton b = Baton(static_cast<RdKafka::ErrorCode>(code), ErrorMessage());
     return b.ToObject();
   }
 
@@ -150,12 +149,12 @@ class ConnectionMetadata : public ErrorAwareWorker {
   void HandleErrorCallback();
 
  private:
-  NodeKafka::Connection * connection_;
+  NodeKafka::Connection * m_connection;
 
-  std::string topic_;
-  int timeout_ms_;
+  std::string m_topic;
+  int m_timeout_ms;
 
-  RdKafka::Metadata* metadata_;
+  RdKafka::Metadata* m_metadata;
 
   // Now this is the data that will get translated in the OK callback
 };
@@ -170,7 +169,7 @@ class ProducerConnect : public ErrorAwareWorker {
   void HandleErrorCallback();
 
  private:
-  NodeKafka::Producer * producer;
+  NodeKafka::Producer * m_producer;
 };
 
 class ProducerDisconnect : public ErrorAwareWorker {
@@ -183,7 +182,7 @@ class ProducerDisconnect : public ErrorAwareWorker {
   void HandleErrorCallback();
 
  private:
-  NodeKafka::Producer * producer;
+  NodeKafka::Producer * m_producer;
 };
 
 class ProducerProduce : public ErrorAwareWorker {
@@ -197,8 +196,8 @@ class ProducerProduce : public ErrorAwareWorker {
   void HandleErrorCallback();
 
  private:
-  NodeKafka::Producer * producer;
-  NodeKafka::ProducerMessage * message;
+  NodeKafka::Producer * m_producer;
+  NodeKafka::ProducerMessage * m_message;
 };
 
 class ConsumerConnect : public ErrorAwareWorker {
@@ -211,7 +210,7 @@ class ConsumerConnect : public ErrorAwareWorker {
   void HandleErrorCallback();
 
  private:
-  NodeKafka::Consumer * consumer;
+  NodeKafka::Consumer * m_consumer;
 };
 
 class ConsumerDisconnect : public ErrorAwareWorker {
@@ -224,7 +223,7 @@ class ConsumerDisconnect : public ErrorAwareWorker {
   void HandleErrorCallback();
 
  private:
-  NodeKafka::Consumer * consumer;
+  NodeKafka::Consumer * m_consumer;
 };
 
 class ConsumerSubscribe : public ErrorAwareWorker {
@@ -237,8 +236,8 @@ class ConsumerSubscribe : public ErrorAwareWorker {
   void HandleOKCallback();
   void HandleErrorCallback();
  private:
-  NodeKafka::Consumer * consumer;
-  std::vector<std::string> topics;
+  NodeKafka::Consumer * m_consumer;
+  std::vector<std::string> m_topics;
 };
 
 class ConsumerUnsubscribe : public ErrorAwareWorker {
@@ -251,7 +250,7 @@ class ConsumerUnsubscribe : public ErrorAwareWorker {
   void HandleOKCallback();
   void HandleErrorCallback();
  private:
-  NodeKafka::Consumer * consumer;
+  NodeKafka::Consumer * m_consumer;
 };
 
 class ConsumerConsumeLoop : public MessageWorker {
@@ -264,7 +263,7 @@ class ConsumerConsumeLoop : public MessageWorker {
   void HandleErrorCallback();
   void HandleMessageCallback(NodeKafka::Message*);
  private:
-  NodeKafka::Consumer * consumer;
+  NodeKafka::Consumer * m_consumer;
 };
 
 class ConsumerConsume : public ErrorAwareWorker {
@@ -276,8 +275,8 @@ class ConsumerConsume : public ErrorAwareWorker {
   void HandleOKCallback();
   void HandleErrorCallback();
  private:
-  NodeKafka::Consumer * consumer;
-  NodeKafka::Message* _message;
+  NodeKafka::Consumer * m_consumer;
+  NodeKafka::Message* m_message;
 };
 
 class ConsumerConsumeNum : public ErrorAwareWorker {
@@ -306,9 +305,9 @@ class ConsumerCommit : public ErrorAwareWorker {
   void HandleOKCallback();
   void HandleErrorCallback();
  private:
-  NodeKafka::Consumer * consumer;
-  consumer_commit_t _conf;
-  bool committing_message;
+  NodeKafka::Consumer * m_consumer;
+  consumer_commit_t m_conf;
+  bool m_committing_message;
 };
 
 }  // namespace Workers

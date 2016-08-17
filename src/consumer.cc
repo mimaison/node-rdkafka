@@ -17,14 +17,15 @@ using Nan::FunctionCallbackInfo;
 
 namespace NodeKafka {
 
-consumer_commit_t::consumer_commit_t(std::string topic_name, int partition, int64_t offset) {  // NOLINT
-  _topic_name = topic_name;
-  _partition = partition;
-  _offset = offset;
+consumer_commit_t::consumer_commit_t(std::string p_topic_name,
+    int p_partition, int64_t p_offset) {
+  topic_name = p_topic_name;
+  partition = p_partition;
+  offset = p_offset;
 }
 
 consumer_commit_t::consumer_commit_t() {
-  _topic_name = "";
+  topic_name = "";
 }
 
 /**

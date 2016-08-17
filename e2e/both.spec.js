@@ -120,7 +120,7 @@ var testCase = new TestCase('Interoperability tests', function() {
               if (err) {
                 return cb(err);
               }
-
+              console.log('Got a message');
               try {
                 t.equal(buffer.toString(), message.message.toString(),
                   'message is not equal to buffer');

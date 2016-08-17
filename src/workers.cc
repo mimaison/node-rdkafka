@@ -27,25 +27,26 @@ ConnectionMetadata::ConnectionMetadata(
   Nan::Callback *callback, Connection* connection,
   std::string topic, int timeout_ms) :
   ErrorAwareWorker(callback),
-  connection_(connection),
-  topic_(topic),
-  timeout_ms_(timeout_ms) {}
+  m_connection(connection),
+  m_topic(topic),
+  m_timeout_ms(timeout_ms) {}
 
 ConnectionMetadata::~ConnectionMetadata() {}
 
 void ConnectionMetadata::Execute() {
-  if (!connection_->IsConnected()) {
+  if (!m_connection->IsConnected()) {
+    SetErrorCode(RdKafka::ERR__STATE);
     SetErrorMessage("You are not connected");
     return;
   }
 
-  Baton b = connection_->GetMetadata(topic_, timeout_ms_);
+  Baton b = m_connection->GetMetadata(m_topic, m_timeout_ms);
 
   if (b.err() == RdKafka::ERR_NO_ERROR) {
     // No good way to do this except some stupid string delimiting.
     // maybe we'll delimit it by a | or something and just split
     // the string to create the object
-    metadata_ = b.data<RdKafka::Metadata*>();
+    m_metadata = b.data<RdKafka::Metadata*>();
   } else {
     SetErrorCode(b.err());
   }
@@ -63,7 +64,7 @@ void ConnectionMetadata::HandleOKCallback() {
   v8::Local<v8::Array> broker_data = Nan::New<v8::Array>();
   v8::Local<v8::Array> topic_data = Nan::New<v8::Array>();
 
-  const BrokerMetadataList* brokers = metadata_->brokers();  // NOLINT
+  const BrokerMetadataList* brokers = m_metadata->brokers();  // NOLINT
 
   unsigned int broker_i = 0;
 
@@ -87,7 +88,7 @@ void ConnectionMetadata::HandleOKCallback() {
 
   unsigned int topic_i = 0;
 
-  const TopicMetadataList* topics = metadata_->topics();
+  const TopicMetadataList* topics = m_metadata->topics();
 
   for (TopicMetadataList::const_iterator it = topics->begin();
     it != topics->end(); ++it, topic_i++) {
@@ -155,10 +156,10 @@ void ConnectionMetadata::HandleOKCallback() {
   }  // End iterating over topics
 
   Nan::Set(obj, Nan::New("orig_broker_id").ToLocalChecked(),
-    Nan::New<v8::Number>(metadata_->orig_broker_id()));
+    Nan::New<v8::Number>(m_metadata->orig_broker_id()));
 
   Nan::Set(obj, Nan::New("orig_broker_name").ToLocalChecked(),
-    Nan::New<v8::String>(metadata_->orig_broker_name()).ToLocalChecked());
+    Nan::New<v8::String>(m_metadata->orig_broker_name()).ToLocalChecked());
 
   Nan::Set(obj, Nan::New("topics").ToLocalChecked(), topic_data);
   Nan::Set(obj, Nan::New("brokers").ToLocalChecked(), broker_data);
@@ -167,7 +168,7 @@ void ConnectionMetadata::HandleOKCallback() {
 
   callback->Call(argc, argv);
 
-  delete metadata_;
+  delete m_metadata;
 }
 
 void ConnectionMetadata::HandleErrorCallback() {
@@ -190,12 +191,12 @@ void ConnectionMetadata::HandleErrorCallback() {
 
 ProducerConnect::ProducerConnect(Nan::Callback *callback, Producer* producer):
   ErrorAwareWorker(callback),
-  producer(producer) {}
+  m_producer(producer) {}
 
 ProducerConnect::~ProducerConnect() {}
 
 void ProducerConnect::Execute() {
-  Baton b = producer->Connect();
+  Baton b = m_producer->Connect();
 
   if (b.err() != RdKafka::ERR_NO_ERROR) {
     SetErrorCode(b.err());
@@ -209,12 +210,12 @@ void ProducerConnect::HandleOKCallback() {
 
   v8::Local<v8::Object> obj = Nan::New<v8::Object>();
   Nan::Set(obj, Nan::New("name").ToLocalChecked(),
-    Nan::New(producer->Name()).ToLocalChecked());
+    Nan::New(m_producer->Name()).ToLocalChecked());
 
   v8::Local<v8::Value> argv[argc] = { Nan::Null(), obj};
 
   // Activate the dispatchers
-  producer->ActivateDispatchers();
+  m_producer->ActivateDispatchers();
 
   callback->Call(argc, argv);
 }
@@ -231,12 +232,12 @@ void ProducerConnect::HandleErrorCallback() {
 ProducerDisconnect::ProducerDisconnect(Nan::Callback *callback,
   Producer* producer):
   ErrorAwareWorker(callback),
-  producer(producer) {}
+  m_producer(producer) {}
 
 ProducerDisconnect::~ProducerDisconnect() {}
 
 void ProducerDisconnect::Execute() {
-  producer->Disconnect();
+  m_producer->Disconnect();
 }
 
 void ProducerDisconnect::HandleOKCallback() {
@@ -246,14 +247,14 @@ void ProducerDisconnect::HandleOKCallback() {
   v8::Local<v8::Value> argv[argc] = { Nan::Null(), Nan::True()};
 
   // Deactivate the dispatchers
-  producer->DeactivateDispatchers();
+  m_producer->DeactivateDispatchers();
 
   callback->Call(argc, argv);
 }
 
 void ProducerDisconnect::HandleErrorCallback() {
   // This should never run
-  assert(0);
+  assert("ProducerDisconnect Error Callback should never run");
 }
 
 ProducerProduce::ProducerProduce(
@@ -261,15 +262,15 @@ ProducerProduce::ProducerProduce(
     Producer *producer,
     ProducerMessage *message):
   ErrorAwareWorker(callback),
-  producer(producer),
-  message(message) {}
+  m_producer(producer),
+  m_message(message) {}
 
 ProducerProduce::~ProducerProduce() {
-  delete message;
+  delete m_message;
 }
 
 void ProducerProduce::Execute() {
-  Baton b = producer->Produce(message);
+  Baton b = m_producer->Produce(m_message);
 
   if (b.err() != RdKafka::ERR_NO_ERROR) {
     SetErrorCode(b.err());
@@ -305,12 +306,12 @@ void ProducerProduce::HandleErrorCallback() {
 
 ConsumerConnect::ConsumerConnect(Nan::Callback *callback, Consumer* consumer):
   ErrorAwareWorker(callback),
-  consumer(consumer) {}
+  m_consumer(consumer) {}
 
 ConsumerConnect::~ConsumerConnect() {}
 
 void ConsumerConnect::Execute() {
-  Baton b = consumer->Connect();
+  Baton b = m_consumer->Connect();
   // consumer->Wait();
 
   if (b.err() != RdKafka::ERR_NO_ERROR) {
@@ -326,10 +327,10 @@ void ConsumerConnect::HandleOKCallback() {
   // Create the object
   v8::Local<v8::Object> obj = Nan::New<v8::Object>();
   Nan::Set(obj, Nan::New("name").ToLocalChecked(),
-    Nan::New(consumer->Name()).ToLocalChecked());
+    Nan::New(m_consumer->Name()).ToLocalChecked());
 
   v8::Local<v8::Value> argv[argc] = { Nan::Null(), obj };
-  consumer->ActivateDispatchers();
+  m_consumer->ActivateDispatchers();
 
   callback->Call(argc, argv);
 }
@@ -355,12 +356,12 @@ void ConsumerConnect::HandleErrorCallback() {
 ConsumerDisconnect::ConsumerDisconnect(Nan::Callback *callback,
   Consumer* consumer):
   ErrorAwareWorker(callback),
-  consumer(consumer) {}
+  m_consumer(consumer) {}
 
 ConsumerDisconnect::~ConsumerDisconnect() {}
 
 void ConsumerDisconnect::Execute() {
-  Baton b = consumer->Disconnect();
+  Baton b = m_consumer->Disconnect();
 
   if (b.err() != RdKafka::ERR_NO_ERROR) {
     SetErrorCode(b.err());
@@ -373,7 +374,7 @@ void ConsumerDisconnect::HandleOKCallback() {
   const unsigned int argc = 2;
   v8::Local<v8::Value> argv[argc] = { Nan::Null(), Nan::True() };
 
-  consumer->DeactivateDispatchers();
+  m_consumer->DeactivateDispatchers();
 
   callback->Call(argc, argv);
 }
@@ -384,7 +385,7 @@ void ConsumerDisconnect::HandleErrorCallback() {
   const unsigned int argc = 1;
   v8::Local<v8::Value> argv[argc] = { GetErrorObject() };
 
-  consumer->DeactivateDispatchers();
+  m_consumer->DeactivateDispatchers();
 
   callback->Call(argc, argv);
 }
@@ -402,13 +403,13 @@ ConsumerSubscribe::ConsumerSubscribe(Nan::Callback *callback,
   Consumer* consumer,
   std::vector<std::string> topics) :
   ErrorAwareWorker(callback),
-  consumer(consumer),
-  topics(topics) {}
+  m_consumer(consumer),
+  m_topics(topics) {}
 
 ConsumerSubscribe::~ConsumerSubscribe() {}
 
 void ConsumerSubscribe::Execute() {
-  Baton b = consumer->Subscribe(topics);
+  Baton b = m_consumer->Subscribe(m_topics);
 
   if (b.err() != RdKafka::ERR_NO_ERROR) {
     SetErrorCode(b.err());
@@ -445,12 +446,12 @@ void ConsumerSubscribe::HandleErrorCallback() {
 ConsumerUnsubscribe::ConsumerUnsubscribe(Nan::Callback *callback,
                                      Consumer* consumer) :
   ErrorAwareWorker(callback),
-  consumer(consumer) {}
+  m_consumer(consumer) {}
 
 ConsumerUnsubscribe::~ConsumerUnsubscribe() {}
 
 void ConsumerUnsubscribe::Execute() {
-  Baton b = consumer->Unsubscribe();
+  Baton b = m_consumer->Unsubscribe();
 
   if (b.err() != RdKafka::ERR_NO_ERROR) {
     SetErrorCode(b.err());
@@ -499,14 +500,14 @@ void ConsumerUnsubscribe::HandleErrorCallback() {
 ConsumerConsumeLoop::ConsumerConsumeLoop(Nan::Callback *callback,
                                      Consumer* consumer) :
   MessageWorker(callback),
-  consumer(consumer) {}
+  m_consumer(consumer) {}
 
 ConsumerConsumeLoop::~ConsumerConsumeLoop() {}
 
 void ConsumerConsumeLoop::Execute(const ExecutionMessageBus& bus) {
   // Do one check here before we move forward
-  while (consumer->IsConnected() && consumer->IsSubscribed()) {
-    NodeKafka::Message* message = consumer->Consume();
+  while (m_consumer->IsConnected() && m_consumer->IsSubscribed()) {
+    NodeKafka::Message* message = m_consumer->Consume();
     if (message->errcode() == RdKafka::ERR__PARTITION_EOF) {
       delete message;
       usleep(1*1000);
@@ -654,16 +655,16 @@ void ConsumerConsumeNum::HandleErrorCallback() {
 ConsumerConsume::ConsumerConsume(Nan::Callback *callback,
                                      Consumer* consumer) :
   ErrorAwareWorker(callback),
-  consumer(consumer) {}
+  m_consumer(consumer) {}
 
 ConsumerConsume::~ConsumerConsume() {}
 
 void ConsumerConsume::Execute() {
-  _message = consumer->Consume();
-  if (_message->IsError()) {
-    if (_message->errcode() != RdKafka::ERR__TIMED_OUT ||
-      _message->errcode() != RdKafka::ERR__PARTITION_EOF) {
-      SetErrorMessage(RdKafka::err2str(_message->errcode()).c_str());
+  m_message = m_consumer->Consume();
+  if (m_message->IsError()) {
+    if (m_message->errcode() != RdKafka::ERR__TIMED_OUT ||
+      m_message->errcode() != RdKafka::ERR__PARTITION_EOF) {
+      SetErrorMessage(RdKafka::err2str(m_message->errcode()).c_str());
     }
   }
 }
@@ -674,11 +675,11 @@ void ConsumerConsume::HandleOKCallback() {
   const unsigned int argc = 2;
   v8::Local<v8::Value> argv[argc];
   argv[0] = Nan::Null();
-  if (_message->IsError()) {
+  if (m_message->IsError()) {
     argv[1] = Nan::False();
-    delete _message;
+    delete m_message;
   } else {
-    argv[1] = _message->Pack();
+    argv[1] = m_message->Pack();
   }
   callback->Call(argc, argv);
 }
@@ -687,11 +688,11 @@ void ConsumerConsume::HandleErrorCallback() {
   Nan::HandleScope scope;
 
   const unsigned int argc = 1;
-  v8::Local<v8::Value> argv[argc] = { _message->GetErrorObject() };
+  v8::Local<v8::Value> argv[argc] = { m_message->GetErrorObject() };
 
   callback->Call(argc, argv);
 
-  delete _message;
+  delete m_message;
 }
 
 // Commit
@@ -700,31 +701,30 @@ ConsumerCommit::ConsumerCommit(Nan::Callback *callback,
                                      Consumer* consumer,
                                      consumer_commit_t config) :
   ErrorAwareWorker(callback),
-  consumer(consumer),
-  _conf(config) {
-    committing_message = true;
-  }
+  m_consumer(consumer),
+  m_conf(config),
+  m_committing_message(true) {}
 
 ConsumerCommit::ConsumerCommit(Nan::Callback *callback,
                                      Consumer* consumer) :
   ErrorAwareWorker(callback),
-  consumer(consumer) {
-    committing_message = false;
-  }
+  m_consumer(consumer),
+  m_committing_message(false) {}
 
 ConsumerCommit::~ConsumerCommit() {}
 
 void ConsumerCommit::Execute() {
-  Baton b(NULL);
-
-  if (committing_message) {
-    b = consumer->Commit(_conf._topic_name, _conf._partition, _conf._offset);
+  if (m_committing_message) {
+    Baton b =
+      m_consumer->Commit(m_conf.topic_name, m_conf.partition, m_conf.offset);
+    if (b.err() != RdKafka::ERR_NO_ERROR) {
+      SetErrorCode(b.err());
+    }
   } else {
-    b = consumer->Commit();
-  }
-
-  if (b.err() != RdKafka::ERR_NO_ERROR) {
-    SetErrorCode(b.err());
+    Baton b = m_consumer->Commit();
+    if (b.err() != RdKafka::ERR_NO_ERROR) {
+      SetErrorCode(b.err());
+    }
   }
 }
 
