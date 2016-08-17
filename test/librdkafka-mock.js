@@ -35,7 +35,31 @@ function Connection(globalConfig, topicConfig) {
 
 Connection.prototype.onEvent = function(cb) {
   t.equal(typeof cb, 'function', 'Callback must be a function');
+
+  this.onEvent = cb;
 };
+
+Connection.prototype.connect = function(cb) {
+  t.equal(typeof cb, 'function', 'Callback must be a function');
+
+  this.emit('connect', cb);
+};
+
+Connection.prototype.disconnect = function(cb) {
+  t.equal(typeof cb, 'function', 'Callback must be a function');
+
+  this.emit('disconnect', cb);
+};
+
+Connection.prototype.getMetadata = function(opts, cb) {
+  if (opts) {
+    t.equal(typeof opts, 'object', 'Opts must be an object');
+  }
+  t.equal(typeof cb, 'function', 'Callback must be a function');
+
+  this.emit('getMetadata', opts, cb);
+};
+
 
 // Consumer
 
@@ -47,6 +71,8 @@ function KafkaConsumer(globalConfig, topicConfig) {
 
 KafkaConsumer.prototype.onRebalance = function(cb) {
   t.equal(typeof cb, 'function', 'Callback must be a function');
+
+  this.rebalanceCb = cb;
 };
 
 // Producer
@@ -56,6 +82,12 @@ util.inherits(Producer, Connection);
 function Producer(globalConfig, topicConfig) {
   Connection.call(this, globalConfig, topicConfig);
 }
+
+Producer.prototype.onDeliveryReport = function(cb) {
+  t.equal(typeof cb, 'function', 'Callback must be a function');
+
+  this.deliveryReportCb = cb;
+};
 
 function Topic(topicName, config, client) {
   if (!(client instanceof KafkaConsumer) && !(client instanceof Producer)) {
