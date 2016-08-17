@@ -7,6 +7,4 @@
  * of the MIT license.  See the LICENSE.txt file for details.
  */
 
-var kafka = require('bindings')('node-librdkafka');
-
-module.exports = kafka;
+module.exports = require('bindings')('node-librdkafka');

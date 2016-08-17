@@ -3,10 +3,11 @@ PYTHON ?= python
 NODE ?= node
 CPPLINT ?= cpplint.py
 BUILDTYPE ?= Release
-TESTS = "test/**/*.js"
+TESTS = "test/**/*.spec.js"
 E2E_TESTS = $(wildcard e2e/*.spec.js)
 TEST_REPORTER =
 TEST_OUTPUT =
+MOCHA_FLAGS = -gc --no-colors
 CONFIG_OUTPUTS = \
   build/bindings.target.mk \
   build/Makefile \
@@ -47,10 +48,10 @@ $(CONFIG_OUTPUTS): node_modules/.dirstamp binding.gyp
 	@$(NODE-GYP) configure
 
 test: node_modules/.dirstamp
-	@./node_modules/.bin/mocha $(TEST_REPORTER) $(TESTS) $(TEST_OUTPUT)
+	@./node_modules/.bin/mocha $(MOCHA_FLAGS) $(TEST_REPORTER) $(TESTS) $(TEST_OUTPUT)
 
-e2e: $(E2E_TESTS)
-	@$(NODE) e2e/consumer.spec.js && $(NODE) e2e/producer.spec.js && $(NODE) e2e/both.spec.js
+e2e: node_modules/.dirstamp
+	@./node_modules/.bin/mocha $(MOCHA_FLAGS) $(TEST_REPORTER) $(E2E_TESTS) $(TEST_OUTPUT)
 
 
 define release

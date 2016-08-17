@@ -11,20 +11,20 @@ var t = require('assert');
 
 // This replaces some stuff so the next module should be aware
 var mock = require('./librdkafka-mock');
-var Producer = require('../lib/producer');
-Producer.useMock(mock);
+var KafkaConsumer = require('../lib/kafka-consumer');
+KafkaConsumer.useMock(mock);
 
 module.exports = {
-  'Producer': {
+  'KafkaConsumer': {
     'exports a function': function() {
-      t.equal(typeof Producer, 'function', 'Should export a function');
+      t.equal(typeof KafkaConsumer, 'function', 'Should export a function');
     },
     'should instantiate to an object': function() {
-      var client = new Producer();
+      var client = new KafkaConsumer();
       t.equal(typeof client, 'object', 'Should export an object');
     },
     'should instantiate an object with default parameters': function() {
-      var client = new Producer();
+      var client = new KafkaConsumer();
     }
   }
 };

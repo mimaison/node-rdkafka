@@ -321,6 +321,7 @@ void Consumer::Init(v8::Local<v8::Object> exports) {
   Nan::SetPrototypeMethod(tpl, "subscribe", NodeSubscribe);
   Nan::SetPrototypeMethod(tpl, "subscribeSync", NodeSubscribeSync);
   Nan::SetPrototypeMethod(tpl, "unsubscribe", NodeUnsubscribe);
+  Nan::SetPrototypeMethod(tpl, "unsubscribeSync", NodeUnsubscribeSync);
   Nan::SetPrototypeMethod(tpl, "consumeLoop", NodeConsumeLoop);
   Nan::SetPrototypeMethod(tpl, "consume", NodeConsume);
 
