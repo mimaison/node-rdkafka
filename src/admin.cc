@@ -189,6 +189,14 @@ Baton AdminClient::CreateTopic(rd_kafka_NewTopic_t* topic, int timeout_ms) {
     rd_kafka_AdminOptions_t *options = rd_kafka_AdminOptions_new(
       m_client->c_ptr(), RD_KAFKA_ADMIN_OP_CREATETOPICS);
 
+    char* errbuf = reinterpret_cast<char*>(malloc(100));
+    size_t errstr_size = 100;
+    const rd_kafka_resp_err_t errcode = rd_kafka_AdminOptions_set_request_timeout(
+      options,
+      timeout_ms,
+      errbuf,
+      errstr_size);
+
     // Create queue just for this operation
     rd_kafka_queue_t * topic_rkqu = rd_kafka_queue_new(m_client->c_ptr());
 
