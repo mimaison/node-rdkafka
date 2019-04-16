@@ -191,12 +191,12 @@ Baton AdminClient::CreateTopic(rd_kafka_NewTopic_t* topic, int timeout_ms) {
 
     char* errbuf = reinterpret_cast<char*>(malloc(255));
     size_t errstr_size = 255;
-    rd_kafka_resp_err_t errcode = rd_kafka_AdminOptions_set_request_timeout(
+    /*rd_kafka_resp_err_t errcode = rd_kafka_AdminOptions_set_request_timeout(
       options,
       timeout_ms,
       errbuf,
       errstr_size);
-    printf("err code is: %v", errcode);
+    printf("err code is: %v", errcode);*/
 
     errcode = rd_kafka_AdminOptions_set_operation_timeout(
       options,
