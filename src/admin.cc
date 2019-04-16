@@ -196,6 +196,7 @@ Baton AdminClient::CreateTopic(rd_kafka_NewTopic_t* topic, int timeout_ms) {
       timeout_ms,
       errbuf,
       errstr_size);
+    printf("%v", errcode);
 
     // Create queue just for this operation
     rd_kafka_queue_t * topic_rkqu = rd_kafka_queue_new(m_client->c_ptr());
